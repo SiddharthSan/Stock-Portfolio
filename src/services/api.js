@@ -1,27 +1,50 @@
-// src/services/api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'API_URL',  // Replace with your backend URL
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000', // Use env variable for flexibility
   timeout: 10000,
 });
 
+// Fetch all stocks
 export const getStocks = async () => {
-  const response = await api.get('/stocks');
-  return response.data;
+  try {
+    const response = await api.get('/stocks');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching stocks:', error);
+    throw new Error('Failed to fetch stocks.');
+  }
 };
 
+// Add a new stock
 export const addStock = async (stockData) => {
-  const response = await api.post('/stocks', stockData);
-  return response.data;
+  try {
+    const response = await api.post('/stocks', stockData);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding stock:', error);
+    throw new Error('Failed to add stock.');
+  }
 };
 
-export const updateStock = async (id, stockData) => {
-  const response = await api.put(`/stocks/${id}`, stockData);
-  return response.data;
+// Update a stock by ticker
+export const updateStock = async (ticker, stockData) => {
+  try {
+    const response = await api.put(`/stocks/${ticker}`, stockData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating stock with ticker ${ticker}:`, error);
+    throw new Error('Failed to update stock.');
+  }
 };
 
-export const deleteStock = async (id) => {
-  const response = await api.delete(`/stocks/${id}`);
-  return response.data;
+// Delete a stock by ticker
+export const deleteStock = async (ticker) => {
+  try {
+    const response = await api.delete(`/stocks/${ticker}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting stock with ticker ${ticker}:`, error);
+    throw new Error('Failed to delete stock.');
+  }
 };

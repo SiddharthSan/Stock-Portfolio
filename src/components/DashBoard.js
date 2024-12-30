@@ -1,4 +1,3 @@
-// Dashboard.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StockTable from './StockTable';
@@ -34,16 +33,6 @@ const Dashboard = () => {
     setTotalValue(total);
   };
 
-  const handleAddStock = async (newStock) => {
-    try {
-      await axios.post('http://localhost:5000/stocks', newStock);
-      await fetchStocks(); // Fetch updated stocks list
-      navigate('/');
-    } catch (err) {
-      console.error('Error adding stock:', err);
-    }
-  };
-
   const handleEditStock = async (updatedStock) => {
     try {
       await axios.put(`http://localhost:5000/stocks/${updatedStock.ticker}`, updatedStock);
@@ -67,10 +56,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div>
+    <div className="bg-slate-900 min-h-screen text-white">
       <Navbar />
-      <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-4">Stock Portfolio</h1>
+      <div className="container mx-auto p-8">
+        <h1 className="text-3xl font-bold mb-6 text-indigo-300">Stock Portfolio</h1>
         <p className="text-xl mb-6">Total Portfolio Value: ${totalValue.toFixed(2)}</p>
 
         <button onClick={() => navigate('/add-stock')} className="btn btn-primary mb-4">

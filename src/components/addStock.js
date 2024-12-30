@@ -49,72 +49,74 @@ const AddStock = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">Add New Stock</h2>
-      {errors.submit && <p className="text-red-500 mb-4">{errors.submit}</p>}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block font-medium" htmlFor="name">Stock Name</label>
-          <input
-            type="text"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={`input input-bordered w-full ${errors.name ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-        </div>
-        <div>
-          <label className="block font-medium" htmlFor="ticker">Ticker</label>
-          <input
-            type="text"
-            id="ticker"
-            value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
-            className={`input input-bordered w-full ${errors.ticker ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.ticker && <p className="text-red-500 text-sm">{errors.ticker}</p>}
-        </div>
-        <div>
-          <label className="block font-medium" htmlFor="quantity">Quantity</label>
-          <input
-            type="number"
-            id="quantity"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className={`input input-bordered w-full ${errors.quantity ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
-        </div>
-        <div>
-          <label className="block font-medium" htmlFor="buyPrice">Buy Price</label>
-          <input
-            type="number"
-            id="buyPrice"
-            value={buyPrice}
-            onChange={(e) => setBuyPrice(e.target.value)}
-            className={`input input-bordered w-full ${errors.buyPrice ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.buyPrice && <p className="text-red-500 text-sm">{errors.buyPrice}</p>}
-        </div>
-        <div>
-          <label className="block font-medium" htmlFor="currentPrice">Current Price</label>
-          <input
-            type="number"
-            id="currentPrice"
-            value={currentPrice}
-            onChange={(e) => setCurrentPrice(e.target.value)}
-            className={`input input-bordered w-full ${errors.currentPrice ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.currentPrice && <p className="text-red-500 text-sm">{errors.currentPrice}</p>}
-        </div>
-        <button type="submit" className="btn btn-primary w-full mt-4">Add Stock</button>
-      </form>
+    <div className="bg-slate-900 min-h-screen text-white">
+      <div className="container mx-auto p-8">
+        <h2 className="text-3xl font-bold mb-6 text-indigo-300">Add New Stock</h2>
+        {errors.submit && <p className="text-red-500 mb-4">{errors.submit}</p>}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block font-medium" htmlFor="name">Stock Name</label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`input input-bordered w-full ${errors.name ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block font-medium" htmlFor="ticker">Ticker</label>
+            <input
+              type="text"
+              id="ticker"
+              value={ticker}
+              onChange={(e) => setTicker(e.target.value)}
+              className={`input input-bordered w-full ${errors.ticker ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.ticker && <p className="text-red-500 text-sm">{errors.ticker}</p>}
+          </div>
+          <div>
+            <label className="block font-medium" htmlFor="quantity">Quantity</label>
+            <input
+              type="number"
+              id="quantity"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className={`input input-bordered w-full ${errors.quantity ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
+          </div>
+          <div>
+            <label className="block font-medium" htmlFor="buyPrice">Buy Price</label>
+            <input
+              type="number"
+              id="buyPrice"
+              value={buyPrice}
+              onChange={(e) => setBuyPrice(e.target.value)}
+              className={`input input-bordered w-full ${errors.buyPrice ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.buyPrice && <p className="text-red-500 text-sm">{errors.buyPrice}</p>}
+          </div>
+          <div>
+            <label className="block font-medium" htmlFor="currentPrice">Current Price</label>
+            <input
+              type="number"
+              id="currentPrice"
+              value={currentPrice}
+              onChange={(e) => setCurrentPrice(e.target.value)}
+              className={`input input-bordered w-full ${errors.currentPrice ? 'border-red-500' : ''}`}
+              required
+            />
+            {errors.currentPrice && <p className="text-red-500 text-sm">{errors.currentPrice}</p>}
+          </div>
+          <button type="submit" className="btn btn-primary w-full mt-4">Add Stock</button>
+        </form>
+      </div>
     </div>
   );
 };
