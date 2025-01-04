@@ -1,13 +1,14 @@
-// components/AddStockPage.js
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePrices } from '../context/priceContext';
 import axios from 'axios';
+import Navbar from './Navbar';
+
 
 const AddStockPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const onStockAdded = location.state?.onStockAdded; // Get onStockAdded from location state
+  const onStockAdded = location.state?.onStockAdded;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -95,78 +96,79 @@ const AddStockPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6">Add New Stock</h1>
+    <>
+    <div className="bg-gray-900 min-h-screen flex items-center justify-center py-12">
+      <div className="max-w-4xl w-full mx-auto bg-gray-800 rounded-lg shadow-lg p-8">
+        <h1 className="text-3xl font-bold mb-8 text-white">Add New Stock</h1>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <div className="bg-red-600 text-white px-4 py-3 rounded mb-6" role="alert">
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+            <label className="block text-sm font-medium text-gray-300">Company Name</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-white"
               placeholder="e.g., Apple Inc"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Ticker Symbol</label>
+            <label className="block text-sm font-medium text-gray-300">Ticker Symbol</label>
             <input
               type="text"
               name="ticker"
               value={formData.ticker}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-white"
               placeholder="e.g., AAPL"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Quantity</label>
+            <label className="block text-sm font-medium text-gray-300">Quantity</label>
             <input
               type="number"
               name="quantity"
               value={formData.quantity}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-white"
               placeholder="Number of shares"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Buy Price</label>
+            <label className="block text-sm font-medium text-gray-300">Buy Price</label>
             <input
               type="number"
               name="buyPrice"
               value={formData.buyPrice}
               onChange={handleChange}
               step="0.01"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-white"
               placeholder="Price per share"
             />
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-4 mt-8">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="px-6 py-2 border border-gray-600 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-600"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {loading ? 'Adding...' : 'Add Stock'}
             </button>
@@ -174,6 +176,7 @@ const AddStockPage = () => {
         </form>
       </div>
     </div>
+    </>
   );
 };
 

@@ -20,6 +20,9 @@ const About = () => {
           <p className="text-lg text-gray-400 leading-relaxed">
             This project is a stock portfolio tracker that allows users to manage their stock investments effectively. It provides a dashboard to view, add, edit, and delete stocks, along with calculating the total portfolio value dynamically.
           </p>
+          <p className="text-lg text-gray-400 leading-relaxed">
+            The project integrates with the Alpha Vantage API to fetch live stock prices. Since the free version of the API has limitations on the number of requests, the application handles rate limiting gracefully by showing a notification if the limit is reached.
+          </p>
         </section>
 
         <section className="space-y-6">
@@ -37,17 +40,20 @@ const About = () => {
             <li className="hover:text-indigo-500 transition-all duration-300">
               View total portfolio value, calculated dynamically based on stock data.
             </li>
+            <li className="hover:text-indigo-500 transition-all duration-300">
+              Fetch real-time stock prices from the Alpha Vantage API with rate limiting handling.
+            </li>
           </ul>
         </section>
 
         <section className="space-y-6">
           <h2 className="text-3xl font-semibold mb-4 text-gray-300">Project Structure</h2>
           <p className="text-lg text-gray-400 leading-relaxed">
-            The project uses a JSON file ('stocks.json') as the database to store stock information. The backend is built with Node.js and Express, while the frontend is powered by React. The application is structured as follows:
+            The project uses a MySQL as the database to store stock information. The backend is built with Node.js and Express, while the frontend is powered by React. The application is structured as follows:
           </p>
           <ul className="list-disc pl-6 space-y-3 text-lg text-gray-400">
             <li>
-              <strong className="text-gray-300">Backend:</strong> Handles API routes for fetching, adding, editing, and deleting stocks. The server reads and writes to `stocks.json` to persist data.
+              <strong className="text-gray-300">Backend:</strong> Handles API routes for fetching, adding, editing, and deleting stocks. The server reads and writes to MySQL database to persist data.
             </li>
             <li>
               <strong className="text-gray-300">Frontend:</strong> Provides a responsive UI for users to interact with their portfolio. Key components include:
