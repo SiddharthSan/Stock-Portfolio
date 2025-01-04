@@ -1,76 +1,192 @@
+// components/Dashboard.js
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import StockTable from './StockTable';
-import Navbar from './Navbar';
+import { Link } from 'react-router-dom';
+import { usePrices } from '../context/priceContext';
+import Navbar from './Navbar'; // Adjust the import path based on your file structure
 import axios from 'axios';
 
-const Dashboard = () => {
+const Dashboard = ({ onDelete }) => {
+  const { prices, isFetching, errors } = usePrices();
   const [stocks, setStocks] = useState([]);
-  const [totalValue, setTotalValue] = useState(0);
-  const navigate = useNavigate();
-
-  const fetchStocks = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/stocks');
-      setStocks(response.data);
-    } catch (err) {
-      console.error('Error fetching stock data:', err);
-    }
-  };
 
   useEffect(() => {
+    const fetchStocks = async () => {
+      try {
+        const response = await axios.get('/stocks');
+        setStocks(response.data);
+      } catch (error) {
+        console.error('Failed to fetch stocks:', error);
+      }
+    };
+
     fetchStocks();
-  }, []); 
+  }, []);
 
-  useEffect(() => {
-    calculateTotalValue(stocks);
-  }, [stocks]);
+  const calculateTotalValue = (quantity, price) => {
+    return quantity * price;
+  };
 
-  const calculateTotalValue = (stocks) => {
-    const total = stocks.reduce((sum, stock) => {
-      return sum + (stock.quantity * stock.currentPrice);
+  const calculateProfitLoss = (quantity, buyPrice, currentPrice) => {
+    const invested = quantity * buyPrice;
+    const current = quantity * currentPrice;
+    return current - invested;
+  };
+
+  const calculateTotalPortfolioValue = () => {
+    return stocks.reduce((total, stock) => {
+      const currentPrice = prices[stock.ticker]?.price || stock.currentPrice;
+      return total + calculateTotalValue(stock.quantity, currentPrice);
     }, 0);
-    setTotalValue(total);
   };
 
-  const handleEditStock = async (updatedStock) => {
-    try {
-      await axios.put(`http://localhost:5000/stocks/${updatedStock.ticker}`, updatedStock);
-      setStocks((prevStocks) =>
-        prevStocks.map((stock) =>
-          stock.ticker === updatedStock.ticker ? updatedStock : stock
-        )
-      );
-    } catch (err) {
-      console.error('Error updating stock:', err);
-    }
+  const calculateTotalProfitLoss = () => {
+    return stocks.reduce((total, stock) => {
+      const currentPrice = prices[stock.ticker]?.price || stock.currentPrice;
+      return total + calculateProfitLoss(stock.quantity, stock.buyPrice, currentPrice);
+    }, 0);
   };
 
-  const handleDeleteStock = async (ticker) => {
-    try {
-      await axios.delete(`http://localhost:5000/stocks/${ticker}`);
-      setStocks((prevStocks) => prevStocks.filter((stock) => stock.ticker !== ticker));
-    } catch (err) {
-      console.error('Error deleting stock:', err);
-    }
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value);
+  };
+
+  const formatPercentage = (value) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'percent',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value / 100);
   };
 
   return (
-    <div className="bg-slate-900 min-h-screen text-white">
+    <div>
+      {/* Navbar */}
       <Navbar />
-      <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-6 text-indigo-300">Stock Portfolio</h1>
-        <p className="text-xl mb-6">Total Portfolio Value: ${totalValue.toFixed(2)}</p>
 
-        <button onClick={() => navigate('/add-stock')} className="btn btn-primary mb-4">
-          Add New Stock
-        </button>
+      {/* Dashboard Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Stock Portfolio</h1>
+          <Link
+            to="/add-stock"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Add Stock
+          </Link>
+        </div>
 
-        <StockTable
-          stocks={stocks}
-          onDelete={handleDeleteStock}
-          onEdit={handleEditStock}
-        />
+        {/* Portfolio Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-2">Total Portfolio Value</h2>
+            <p className="text-2xl font-bold">{formatCurrency(calculateTotalPortfolioValue())}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-2">Total Profit/Loss</h2>
+            <p className={`text-2xl font-bold ${calculateTotalProfitLoss() >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {formatCurrency(calculateTotalProfitLoss())}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-2">Number of Stocks</h2>
+            <p className="text-2xl font-bold">{stocks.length}</p>
+          </div>
+        </div>
+
+        {/* Stocks Table */}
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Value</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profit/Loss</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {stocks.map((stock) => {
+                const priceData = prices[stock.ticker];
+                const currentPrice = priceData?.price || stock.currentPrice;
+                const totalValue = calculateTotalValue(stock.quantity, currentPrice);
+                const profitLoss = calculateProfitLoss(stock.quantity, stock.buyPrice, currentPrice);
+                const profitLossPercentage = (profitLoss / (stock.quantity * stock.buyPrice)) * 100;
+
+                return (
+                  <tr key={stock.ticker}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{stock.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{stock.ticker}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{stock.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(stock.buyPrice)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {errors[stock.ticker] ? (
+                        <span className="text-red-500">Error fetching price</span>
+                      ) : (
+                        <div>
+                          {formatCurrency(currentPrice)}
+                          {priceData && (
+                            <span className={`ml-2 text-sm ${priceData.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              ({priceData.change >= 0 ? '+' : ''}{formatPercentage(priceData.changePercent)})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(totalValue)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}>
+                        {formatCurrency(profitLoss)}
+                        <span className="text-sm ml-1">
+                          ({profitLoss >= 0 ? '+' : ''}{formatPercentage(profitLossPercentage)}%)
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <Link
+                          to={`/edit-stock/${stock.ticker}`}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => onDelete(stock.ticker)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Loading Indicator */}
+        {isFetching && (
+          <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow">
+            Updating prices...
+          </div>
+        )}
+
+        {/* Empty State */}
+        {stocks.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No stocks in your portfolio</h3>
+            <p className="text-gray-500">Add your first stock to start tracking your investments.</p>
+          </div>
+        )}
       </div>
     </div>
   );

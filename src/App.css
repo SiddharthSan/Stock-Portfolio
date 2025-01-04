@@ -36,3 +36,34 @@
     transform: rotate(360deg);
   }
 }
+.stock-price {
+  font-weight: bold;
+}
+
+.price-change {
+  font-size: 0.9em;
+  margin-left: 8px;
+}
+
+.price-change.positive {
+  color: #22c55e;
+}
+
+.price-change.negative {
+  color: #ef4444;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

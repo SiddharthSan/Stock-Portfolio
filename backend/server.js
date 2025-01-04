@@ -1,13 +1,16 @@
+// server.js
 const dotenv = require('dotenv');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2');
+const axios = require('axios');
 
 dotenv.config();
 
 const app = express();
 const PORT = 5000;
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Enhanced CORS configuration
 app.use(cors({
@@ -40,7 +43,63 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Fetch all stocks
+// New endpoint for fetching live stock prices
+app.get('/live-price/:ticker', async (req, res) => {
+  try {
+    const { ticker } = req.params;
+    
+    // First try to get from Alpha Vantage
+    try {
+      const response = await axios.get(
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`
+      );
+
+      if (response.data['Global Quote']) {
+        const price = parseFloat(response.data['Global Quote']['05. price']);
+        res.json({ 
+          livePrice: price,
+          change: parseFloat(response.data['Global Quote']['09. change']),
+          changePercent: parseFloat(response.data['Global Quote']['10. change percent'].replace('%', '')),
+          source: 'alphavantage'
+        });
+        
+        // Update the price in database
+        const updateQuery = 'UPDATE stocks SET currentPrice = ? WHERE ticker = ?';
+        db.query(updateQuery, [price, ticker]);
+        
+        return;
+      }
+    } catch (alphaVantageError) {
+      console.warn('Alpha Vantage API error:', alphaVantageError.response?.data || alphaVantageError.message);
+    }
+
+    // If Alpha Vantage fails, get price from database
+    const query = 'SELECT currentPrice, buyPrice FROM stocks WHERE ticker = ?';
+    db.query(query, [ticker], (err, results) => {
+      if (err) {
+        console.error('Database query error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (results.length > 0) {
+        const dbPrice = results[0].currentPrice;
+        // Use the last stored price and indicate no change since we don't have real-time data
+        res.json({
+          livePrice: dbPrice,
+          change: 0,
+          changePercent: 0,
+          source: 'database'
+        });
+      } else {
+        res.status(404).json({ error: 'Stock not found in database' });
+      }
+    });
+  } catch (error) {
+    console.error('Error in live-price endpoint:', error);
+    res.status(500).json({ error: 'Failed to fetch stock price' });
+  }
+});
+// Existing endpoints...
 app.get('/stocks', async (req, res) => {
   try {
     db.query('SELECT * FROM stocks', (err, results) => {
@@ -56,7 +115,6 @@ app.get('/stocks', async (req, res) => {
   }
 });
 
-// Add a new stock
 app.post('/stocks', (req, res) => {
   try {
     const { name, ticker, quantity, buyPrice, currentPrice } = req.body;
@@ -80,7 +138,6 @@ app.post('/stocks', (req, res) => {
   }
 });
 
-// Edit a stock
 app.put('/stocks/:ticker', (req, res) => {
   try {
     const { name, quantity, buyPrice, currentPrice } = req.body;
@@ -108,7 +165,6 @@ app.put('/stocks/:ticker', (req, res) => {
   }
 });
 
-// Delete a stock
 app.delete('/stocks/:ticker', (req, res) => {
   try {
     const { ticker } = req.params;
@@ -129,7 +185,6 @@ app.delete('/stocks/:ticker', (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
@@ -138,7 +193,6 @@ app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   db.end();
   process.exit(0);

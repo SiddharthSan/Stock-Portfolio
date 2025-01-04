@@ -1,3 +1,4 @@
+// components/StockForm.js
 import React, { useState } from 'react';
 import axios from 'axios';
 
@@ -6,8 +7,19 @@ const StockForm = ({ stock, onSave }) => {
   const [ticker, setTicker] = useState(stock ? stock.ticker : '');
   const [quantity, setQuantity] = useState(stock ? stock.quantity : 0);
   const [buyPrice, setBuyPrice] = useState(stock ? stock.buyPrice : 0);
+  const [currentPrice, setCurrentPrice] = useState(stock ? stock.currentPrice : null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const fetchCurrentPrice = async (tickerSymbol) => {
+    try {
+      const response = await axios.get(`/live-price/${tickerSymbol}`);
+      setCurrentPrice(response.data.livePrice);
+    } catch (err) {
+      console.error('Error fetching current price:', err);
+      setError('Failed to fetch current price. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,15 +32,18 @@ const StockForm = ({ stock, onSave }) => {
       return;
     }
 
-    const stockData = { name, ticker, quantity, buyPrice };
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
     try {
-      const response = stock
-        ? await axios.put(`${apiUrl}/stocks/${stock.id}`, stockData)
-        : await axios.post(`${apiUrl}/stocks`, stockData);
+      // Fetch current price before saving
+      const response = await axios.get(`/live-price/${ticker}`);
+      const currentPrice = response.data.livePrice;
 
-      onSave(response.data);
+      const stockData = { name, ticker, quantity, buyPrice, currentPrice };
+      
+      const saveResponse = stock
+        ? await axios.put(`/stocks/${stock.id}`, stockData)
+        : await axios.post(`/stocks`, stockData);
+
+      onSave(saveResponse.data);
     } catch (err) {
       console.error(err);
       setError('Failed to save stock. Please try again.');
@@ -40,9 +55,9 @@ const StockForm = ({ stock, onSave }) => {
   return (
     <form onSubmit={handleSubmit} className="p-4 bg-gray-800 text-white rounded-lg">
       <h2 className="text-lg font-bold mb-4">{stock ? 'Edit Stock' : 'Add New Stock'}</h2>
-      
+
       {error && <p className="text-red-500 mb-2">{error}</p>}
-      
+
       <div className="mb-4">
         <label className="block text-sm mb-1" htmlFor="name">Stock Name</label>
         <input
@@ -63,6 +78,7 @@ const StockForm = ({ stock, onSave }) => {
           value={ticker}
           onChange={(e) => setTicker(e.target.value)}
           placeholder="Ticker"
+          onBlur={() => fetchCurrentPrice(ticker)}
           className="input input-bordered w-full"
         />
       </div>
@@ -88,6 +104,17 @@ const StockForm = ({ stock, onSave }) => {
           onChange={(e) => setBuyPrice(parseFloat(e.target.value) || 0)}
           placeholder="Buy Price"
           className="input input-bordered w-full"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm mb-1" htmlFor="currentPrice">Current Price</label>
+        <input
+          id="currentPrice"
+          type="text"
+          value={currentPrice || ''}
+          readOnly
+          className="input input-bordered w-full bg-gray-700 text-gray-400 cursor-not-allowed"
         />
       </div>
 

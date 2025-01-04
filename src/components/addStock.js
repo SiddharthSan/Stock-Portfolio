@@ -1,124 +1,180 @@
+// components/AddStockPage.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { usePrices } from '../context/priceContext';
 import axios from 'axios';
 
-const AddStock = () => {
+const AddStockPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const onStockAdded = location.state?.onStockAdded; // Get onStockAdded from location state
 
-  const [name, setName] = useState('');
-  const [ticker, setTicker] = useState('');
-  const [quantity, setQuantity] = useState(1); // Default to 1
-  const [buyPrice, setBuyPrice] = useState('');
-  const [currentPrice, setCurrentPrice] = useState('');
-  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
+    name: '',
+    ticker: '',
+    quantity: '',
+    buyPrice: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { getCurrentPrice } = usePrices();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    let processedValue = value;
+    
+    if (name === 'quantity') {
+      processedValue = value ? parseInt(value) : '';
+    } else if (name === 'buyPrice') {
+      processedValue = value ? parseFloat(value) : '';
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: processedValue
+    }));
+  };
 
   const validateForm = () => {
-    const newErrors = {};
-    if (!name) newErrors.name = 'Stock name is required';
-    if (!ticker) newErrors.ticker = 'Ticker is required';
-    if (!quantity || quantity <= 0) newErrors.quantity = 'Quantity must be a positive number';
-    if (!buyPrice || buyPrice <= 0) newErrors.buyPrice = 'Buy price must be a positive number';
-    if (!currentPrice || currentPrice <= 0) newErrors.currentPrice = 'Current price must be a positive number';
-    return newErrors;
+    if (!formData.name || !formData.ticker || !formData.quantity || !formData.buyPrice) {
+      setError('All fields are required');
+      return false;
+    }
+    if (formData.quantity <= 0) {
+      setError('Quantity must be greater than 0');
+      return false;
+    }
+    if (formData.buyPrice <= 0) {
+      setError('Buy price must be greater than 0');
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    const newStock = {
-      name,
-      ticker,
-      quantity: parseInt(quantity),
-      buyPrice: parseFloat(buyPrice),
-      currentPrice: parseFloat(currentPrice),
-    };
+    setLoading(true);
+    setError('');
 
     try {
-      await axios.post('http://localhost:5000/stocks', newStock);
+      // First get the current price
+      const currentPrice = await getCurrentPrice(formData.ticker);
+      
+      if (!currentPrice) {
+        throw new Error('Failed to fetch current price');
+      }
+
+      // Prepare the stock data
+      const stockData = {
+        name: formData.name,
+        ticker: formData.ticker.toUpperCase(),
+        quantity: parseInt(formData.quantity),
+        buyPrice: parseFloat(formData.buyPrice),
+        currentPrice: currentPrice
+      };
+
+      // Make the API call directly
+      await axios.post('/stocks', stockData);
+
+      // Call the onStockAdded callback if provided
+      if (onStockAdded) {
+        onStockAdded(stockData);
+      }
+      
+      // If successful, navigate back to the dashboard
       navigate('/');
-    } catch (err) {
-      console.error('Error adding stock:', err);
-      setErrors({ submit: 'Error adding stock. Please try again.' });
+      
+    } catch (error) {
+      console.error('Error adding stock:', error);
+      setError(error.response?.data?.error || 'Failed to add stock. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-slate-900 min-h-screen text-white">
-      <div className="container mx-auto p-8">
-        <h2 className="text-3xl font-bold mb-6 text-indigo-300">Add New Stock</h2>
-        {errors.submit && <p className="text-red-500 mb-4">{errors.submit}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-6">Add New Stock</h1>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-medium" htmlFor="name">Stock Name</label>
+            <label className="block text-sm font-medium text-gray-700">Company Name</label>
             <input
               type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`input input-bordered w-full ${errors.name ? 'border-red-500' : ''}`}
-              required
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="e.g., Apple Inc"
             />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
+
           <div>
-            <label className="block font-medium" htmlFor="ticker">Ticker</label>
+            <label className="block text-sm font-medium text-gray-700">Ticker Symbol</label>
             <input
               type="text"
-              id="ticker"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              className={`input input-bordered w-full ${errors.ticker ? 'border-red-500' : ''}`}
-              required
+              name="ticker"
+              value={formData.ticker}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="e.g., AAPL"
             />
-            {errors.ticker && <p className="text-red-500 text-sm">{errors.ticker}</p>}
           </div>
+
           <div>
-            <label className="block font-medium" htmlFor="quantity">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700">Quantity</label>
             <input
               type="number"
-              id="quantity"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className={`input input-bordered w-full ${errors.quantity ? 'border-red-500' : ''}`}
-              required
+              name="quantity"
+              value={formData.quantity}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Number of shares"
             />
-            {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
           </div>
+
           <div>
-            <label className="block font-medium" htmlFor="buyPrice">Buy Price</label>
+            <label className="block text-sm font-medium text-gray-700">Buy Price</label>
             <input
               type="number"
-              id="buyPrice"
-              value={buyPrice}
-              onChange={(e) => setBuyPrice(e.target.value)}
-              className={`input input-bordered w-full ${errors.buyPrice ? 'border-red-500' : ''}`}
-              required
+              name="buyPrice"
+              value={formData.buyPrice}
+              onChange={handleChange}
+              step="0.01"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Price per share"
             />
-            {errors.buyPrice && <p className="text-red-500 text-sm">{errors.buyPrice}</p>}
           </div>
-          <div>
-            <label className="block font-medium" htmlFor="currentPrice">Current Price</label>
-            <input
-              type="number"
-              id="currentPrice"
-              value={currentPrice}
-              onChange={(e) => setCurrentPrice(e.target.value)}
-              className={`input input-bordered w-full ${errors.currentPrice ? 'border-red-500' : ''}`}
-              required
-            />
-            {errors.currentPrice && <p className="text-red-500 text-sm">{errors.currentPrice}</p>}
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Adding...' : 'Add Stock'}
+            </button>
           </div>
-          <button type="submit" className="btn btn-primary w-full mt-4">Add Stock</button>
         </form>
       </div>
     </div>
   );
 };
 
-export default AddStock;
+export default AddStockPage;

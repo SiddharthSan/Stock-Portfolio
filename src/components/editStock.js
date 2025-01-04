@@ -1,109 +1,165 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+// components/editStock.js
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
-const EditStock = ({ onEdit }) => {
-  const location = useLocation();
+const EditStock = ({ stocks, onEdit }) => {
   const navigate = useNavigate();
-  const { stock } = location.state;
+  const { ticker } = useParams();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const [updatedStock, setUpdatedStock] = useState(stock);
-  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
+    name: '',
+    ticker: '',
+    quantity: '',
+    buyPrice: '',
+    currentPrice: ''
+  });
+
+  useEffect(() => {
+    const stock = stocks.find(s => s.ticker === ticker);
+    if (stock) {
+      setFormData(stock);
+    } else {
+      setError('Stock not found');
+    }
+  }, [stocks, ticker]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUpdatedStock((prev) => ({
+    let processedValue = value;
+    
+    if (name === 'quantity') {
+      processedValue = value ? parseInt(value) : '';
+    } else if (name === 'buyPrice' || name === 'currentPrice') {
+      processedValue = value ? parseFloat(value) : '';
+    }
+
+    setFormData(prev => ({
       ...prev,
-      [name]: name === 'quantity' || name === 'buyPrice' ? parseFloat(value) : value,
+      [name]: processedValue
     }));
   };
 
-  const handleSave = async () => {
+  const validateForm = () => {
+    if (!formData.name || !formData.quantity || !formData.buyPrice) {
+      setError('All fields are required');
+      return false;
+    }
+    if (formData.quantity <= 0) {
+      setError('Quantity must be greater than 0');
+      return false;
+    }
+    if (formData.buyPrice <= 0) {
+      setError('Buy price must be greater than 0');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!validateForm()) return;
 
+    setLoading(true);
+    setError('');
+
     try {
-      await axios.put(`http://localhost:5000/stocks/${updatedStock.ticker}`, updatedStock);
-      onEdit(updatedStock);  // Call the onEdit callback
-      navigate('/');  // Navigate back after successful update
-    } catch (err) {
-      console.error('Error updating stock:', err);
-      setErrors({ submit: 'Error updating stock. Please try again.' });
+      // Fetch current price from Alpha Vantage
+      const response = await axios.get(`/live-price/${formData.ticker}`);
+      const currentPrice = response.data.livePrice;
+
+      const stockData = {
+        ...formData,
+        currentPrice: currentPrice
+      };
+
+      const success = await onEdit(stockData);
+      if (success) {
+        navigate('/');
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to update stock');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!updatedStock.name) newErrors.name = 'Stock name is required';
-    if (updatedStock.quantity <= 0) newErrors.quantity = 'Quantity must be a positive number';
-    if (updatedStock.buyPrice <= 0) newErrors.buyPrice = 'Buy price must be a positive number';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   return (
-    <div className="bg-gray-900 min-h-screen text-white">
-      <div className="container mx-auto p-8">
-        <h1 className="text-2xl font-bold mb-6 text-indigo-300">Edit Stock</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-6">Edit Stock</h1>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+            <span>{error}</span>
+          </div>
+        )}
 
-        {errors.submit && <p className="text-red-500 mb-4">{errors.submit}</p>}
-
-        <div className="space-y-4">
-          <div className="form-group">
-            <label className="block text-sm font-medium mb-1">Stock Name</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Company Name</label>
             <input
               type="text"
               name="name"
-              value={updatedStock.name}
+              value={formData.name}
               onChange={handleChange}
-              className={`input input-bordered w-full bg-gray-800 text-white ${errors.name ? 'border-red-500' : ''}`}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
 
-          <div className="form-group">
-            <label className="block text-sm font-medium mb-1">Quantity</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Ticker Symbol</label>
+            <input
+              type="text"
+              name="ticker"
+              value={formData.ticker}
+              disabled
+              className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Quantity</label>
             <input
               type="number"
               name="quantity"
-              value={updatedStock.quantity}
+              value={formData.quantity}
               onChange={handleChange}
-              className={`input input-bordered w-full bg-gray-800 text-white ${errors.quantity ? 'border-red-500' : ''}`}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-            {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
           </div>
 
-          <div className="form-group">
-            <label className="block text-sm font-medium mb-1">Buy Price</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Buy Price</label>
             <input
               type="number"
               name="buyPrice"
-              value={updatedStock.buyPrice}
+              value={formData.buyPrice}
               onChange={handleChange}
-              className={`input input-bordered w-full bg-gray-800 text-white ${errors.buyPrice ? 'border-red-500' : ''}`}
-            />
-            {errors.buyPrice && <p className="text-red-500 text-sm">{errors.buyPrice}</p>}
-          </div>
-
-          <div className="form-group">
-            <label className="block text-sm font-medium mb-1">Current Price (Non-Editable)</label>
-            <input
-              type="number"
-              name="currentPrice"
-              value={updatedStock.currentPrice}
-              readOnly
-              disabled
-              className="input input-bordered w-full bg-gray-800 text-gray-400 cursor-not-allowed"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
-          <button
-            onClick={handleSave}
-            className="btn btn-primary mt-4 w-full"
-          >
-            Save
-          </button>
-        </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Updating...' : 'Update Stock'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

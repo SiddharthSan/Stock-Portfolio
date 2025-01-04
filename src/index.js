@@ -6,13 +6,11 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { PriceProvider } from './context/priceContext';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PriceProvider>
       <App />
     </PriceProvider>
   </React.StrictMode>
 );
-
 reportWebVitals();

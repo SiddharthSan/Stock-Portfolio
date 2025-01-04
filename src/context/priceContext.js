@@ -1,105 +1,97 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+// context/priceContext.js
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import axios from 'axios';
 
 const PriceContext = createContext();
-const POLL_INTERVAL = 60000; // 60 seconds
-const API_KEY = process.env.REACT_APP_ALPHA_VANTAGE_API_KEY;
-
-if (!API_KEY) {
-  console.error('Environment variable REACT_APP_ALPHA_VANTAGE_API_KEY is not defined');
-}
 
 export const PriceProvider = ({ children }) => {
   const [prices, setPrices] = useState({});
-  const [subscribedStocks, setSubscribedStocks] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [priceSource, setPriceSource] = useState({});
 
-  const fetchStockPrice = useCallback(
-    async (ticker) => {
-      try {
-        const response = await axios.get(
-          `https://www.alphavantage.co/query`,
-          {
-            params: {
-              function: 'GLOBAL_QUOTE',
-              symbol: ticker,
-              apikey: API_KEY,
-            },
+  const fetchStockPrice = useCallback(async (ticker) => {
+    try {
+      const response = await axios.get(`/live-price/${ticker}`);
+      if (response.data) {
+        setPrices(prev => ({
+          ...prev,
+          [ticker]: {
+            price: response.data.livePrice,
+            change: response.data.change,
+            changePercent: response.data.changePercent
           }
-        );
-
-        const data = response.data['Global Quote'];
-        if (data && data['05. price']) {
-          return parseFloat(data['05. price']);
-        } else {
-          console.warn(`Invalid data received for ticker: ${ticker}`);
-          return null;
-        }
-      } catch (error) {
-        console.error(`Error fetching price for ${ticker}:`, error.message);
-        return null;
+        }));
+        setPriceSource(prev => ({
+          ...prev,
+          [ticker]: response.data.source
+        }));
+        setErrors(prev => ({ ...prev, [ticker]: null }));
       }
-    },
-    [API_KEY]
-  );
-
-  const updatePrices = useCallback(async () => {
-    setIsFetching(true);
-    const updatedPrices = {};
-
-    for (const ticker of subscribedStocks) {
-      const price = await fetchStockPrice(ticker);
-      if (price !== null) {
-        updatedPrices[ticker] = price;
-      }
+    } catch (error) {
+      console.error(`Error fetching price for ${ticker}:`, error);
+      setErrors(prev => ({ ...prev, [ticker]: 'Failed to fetch price' }));
     }
-
-    setPrices((prev) => ({ ...prev, ...updatedPrices }));
-    setIsFetching(false);
-  }, [fetchStockPrice, subscribedStocks]);
-
-  const subscribeToStock = useCallback((ticker) => {
-    if (!subscribedStocks.includes(ticker)) {
-      setSubscribedStocks((prev) => [...prev, ticker]);
-      return true;
-    }
-    return false;
-  }, [subscribedStocks]);
-
-  const unsubscribeFromStock = useCallback((ticker) => {
-    setSubscribedStocks((prev) => prev.filter((stock) => stock !== ticker));
-    setPrices((prev) => {
-      const updatedPrices = { ...prev };
-      delete updatedPrices[ticker];
-      return updatedPrices;
-    });
-    return true;
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      updatePrices();
-    }, POLL_INTERVAL);
+  const subscribeToStock = useCallback((ticker) => {
+    fetchStockPrice(ticker);
+    // Only set up polling if we're getting data from Alpha Vantage
+    if (priceSource[ticker] === 'alphavantage') {
+      const interval = setInterval(() => fetchStockPrice(ticker), 300000);
+      return () => clearInterval(interval);
+    }
+    return () => {}; // No cleanup needed if using database prices
+  }, [fetchStockPrice, priceSource]);
 
-    return () => clearInterval(interval); // Cleanup on component unmount
-  }, [updatePrices]);
+  const unsubscribeFromStock = useCallback((ticker) => {
+    setPrices(prev => {
+      const newPrices = { ...prev };
+      delete newPrices[ticker];
+      return newPrices;
+    });
+    setPriceSource(prev => {
+      const newSources = { ...prev };
+      delete newSources[ticker];
+      return newSources;
+    });
+  }, []);
 
-  useEffect(() => {
-    updatePrices();
-  }, [subscribedStocks, updatePrices]);
+  const getCurrentPrice = async (ticker) => {
+    setIsFetching(true);
+    try {
+      const response = await axios.get(`/live-price/${ticker}`);
+      if (response.data) {
+        return response.data.livePrice;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching price for ${ticker}:`, error);
+      throw new Error('Failed to fetch current price');
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   return (
-    <PriceContext.Provider
-      value={{
-        prices,
-        subscribeToStock,
-        unsubscribeFromStock,
-        isFetching,
-      }}
-    >
+    <PriceContext.Provider value={{
+      prices,
+      errors,
+      isFetching,
+      priceSource,
+      subscribeToStock,
+      unsubscribeFromStock,
+      getCurrentPrice
+    }}>
       {children}
     </PriceContext.Provider>
   );
 };
 
-export const usePrices = () => useContext(PriceContext);
+export const usePrices = () => {
+  const context = useContext(PriceContext);
+  if (!context) {
+    throw new Error('usePrices must be used within a PriceProvider');
+  }
+  return context;
+};
